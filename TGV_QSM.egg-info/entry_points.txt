@@ -1,3 +1,0 @@
-[console_scripts]
-tgv_qsm = TGV_QSM.qsm_tgv_main:main
-

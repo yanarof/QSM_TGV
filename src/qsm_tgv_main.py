@@ -16,7 +16,10 @@ import nibabel as nib
 import numpy as np
 
 import resample
-from .qsm_tgv_cython import *
+import qsm_tgv_cython
+from resample import get_data
+
+
 
 def _aff_is_diag(aff):
     ''' Utility function returning True if affine is nearly diagonal '''
@@ -26,46 +29,46 @@ def _aff_is_diag(aff):
 def dyp(u, step=1.0):
     """Returns forward differences of a 2D/3D array with respect to x."""
     if (u.ndim == 3):
-        return concatenate((u[:,1:,:] - u[:,0:-1,:], \
-                            zeros([u.shape[0],1,u.shape[2]], u.dtype)), 1)/step
+        return np.concatenate((u[:,1:,:] - u[:,0:-1,:], \
+                            np.zeros([u.shape[0],1,u.shape[2]], u.dtype)), 1)/step
     else:
-        return hstack((u[:,1:]-u[:,0:-1],zeros([u.shape[0],1],u.dtype)))/step
+        return np.hstack((u[:,1:]-u[:,0:-1],np.zeros([u.shape[0],1],u.dtype)))/step
 
 def dym(u, step=1.0):
     """Return backward differences of a 2D/3D array with respect to x."""
     if (u.ndim == 3):
-        return (concatenate((u[:,:-1,:],zeros([u.shape[0],1,u.shape[2]], u.dtype)), 1) \
-               - concatenate((zeros([u.shape[0],1,u.shape[2]], u.dtype), u[:,:-1,:]), 1))/step
+        return (np.concatenate((u[:,:-1,:],np.zeros([u.shape[0],1,u.shape[2]], u.dtype)), 1) \
+               - np.concatenate((np.zeros([u.shape[0],1,u.shape[2]], u.dtype), u[:,:-1,:]), 1))/step
     else:
-        return (hstack((u[:,:-1],zeros([u.shape[0],1],u.dtype))) \
-               - hstack((zeros([u.shape[0],1],u.dtype),u[:,:-1])))/step
+        return (np.hstack((u[:,:-1],np.zeros([u.shape[0],1],u.dtype))) \
+               - np.hstack((np.zeros([u.shape[0],1],u.dtype),u[:,:-1])))/step
 
 def dxp(u, step=1.0):
     """Returns forward differences of a 2D/3D array with respect to y."""
     if (u.ndim == 3):
-        return concatenate((u[1:,:,:] - u[0:-1,:,:], \
-                            zeros([1,u.shape[1],u.shape[2]], u.dtype)), 0)/step
+        return np.concatenate((u[1:,:,:] - u[0:-1,:,:], \
+                            np.zeros([1,u.shape[1],u.shape[2]], u.dtype)), 0)/step
     else:
-        return vstack((u[1:,:]-u[0:-1,:],zeros([1,u.shape[1]],u.dtype)))/step
+        return np.vstack((u[1:,:]-u[0:-1,:],np.zeros([1,u.shape[1]],u.dtype)))/step
 
 def dxm(u, step=1.0):
     """Return backward differences of a 2D/3D array with respect to y."""
     if (u.ndim == 3):
-        return (concatenate((u[:-1,:,:],zeros([1,u.shape[1],u.shape[2]], u.dtype)), 0) \
-               - concatenate((zeros([1,u.shape[1],u.shape[2]], u.dtype), u[:-1,:,:]), 0))/step
+        return (np.concatenate((u[:-1,:,:],np.zeros([1,u.shape[1],u.shape[2]], u.dtype)), 0) \
+               - np.concatenate((np.zeros([1,u.shape[1],u.shape[2]], u.dtype), u[:-1,:,:]), 0))/step
     else:
-        return (vstack((u[:-1,:],zeros([1,u.shape[1]],u.dtype))) \
-               - vstack((zeros([1,u.shape[1]],u.dtype),u[:-1,:])))/step
+        return (np.vstack((u[:-1,:],np.zeros([1,u.shape[1]],u.dtype))) \
+               - np.vstack((np.zeros([1,u.shape[1]],u.dtype),u[:-1,:])))/step
 
 def dzp(u, step=1.0):
     """Returns forward differences of a 3D array with respect to z."""
-    return concatenate((u[:,:,1:] - u[:,:,0:-1], \
-                        zeros([u.shape[0],u.shape[1],1], u.dtype)), 2)/step
+    return np.concatenate((u[:,:,1:] - u[:,:,0:-1], \
+                        np.zeros([u.shape[0],u.shape[1],1], u.dtype)), 2)/step
 
 def dzm(u, step=1.0):
     """Return backward differences of a 3D array with respect to z."""
-    return (concatenate((u[:,:,:-1],zeros([u.shape[0],u.shape[1],1], u.dtype)), 2) \
-           - concatenate((zeros([u.shape[0],u.shape[1],1], u.dtype),u[:,:,:-1]), 2))/step
+    return (np.concatenate((u[:,:,:-1],np.zeros([u.shape[0],u.shape[1],1], u.dtype)), 2) \
+           - np.concatenate((np.zeros([u.shape[0],u.shape[1],1], u.dtype),u[:,:,:-1]), 2))/step
 
 
 def read_magnitude_image(fname, force_diag=True, do_resampling=True, is_mask_image=True):
@@ -84,9 +87,9 @@ def read_magnitude_image(fname, force_diag=True, do_resampling=True, is_mask_ima
             print('Resampling magnitude/mask data...', file=sys.stderr)
             mag_data = resample.resample_to_physical(mag_data, interpolation=interp_type)
 
-    data = array(mag_data.get_data())
+    data = np.array(get_data(mag_data))
     aff = mag_data.affine
-    res = diag(aff)[0:3]
+    res = np.diag(aff)[0:3]
 
     return data, res, aff
 
@@ -96,8 +99,8 @@ def read_phase_image(fname, mode=0, force_diag=True, do_resampling=True):
     """Returns image data and resolution for a given file
 
     fname : file name of data to load
-    mode: 0 or 1 - if 0 will rescale phase data from -4096.4096 to -pi...pi
-    force_diag: Make sure data affine is diagonal afterwards. Implies dim[2] aligned with field z-axis
+    mode: 0 or 1 - if 0 will rescale phase data from -4096.4096 to -np.pi...np.pi
+    force_np.diag: Make sure data affine is np.diagonal afterwards. Implies dim[2] aligned with field z-axis
     do_resampling: if data was oblique will apply resampling by spline interpolation
     """
 
@@ -105,8 +108,8 @@ def read_phase_image(fname, mode=0, force_diag=True, do_resampling=True):
 
     if mode == 0:
         print('Rescaling phase data...', file=sys.stderr)
-        data = pha_data.get_data()
-        data = array(data)/4096.0*pi
+        data = get_data(pha_data)
+        data = np.array(data)/4096.0*np.pi
         pha_data = resample.new_img_like(pha_data, data)
 
     if force_diag:
@@ -122,23 +125,23 @@ def read_phase_image(fname, mode=0, force_diag=True, do_resampling=True):
             # if not resample:
 
             # else:
-            #    pha_data,_,_ = read_phase_image(fname, mode=mode, force_diag=False)
+            #    pha_data,_,_ = read_phase_image(fname, mode=mode, force_np.diag=False)
             #    cplx_nii = resample.phase_as_cplx(pha_data)
             #    cplx_nii_res = resample.resample_to_physical(cplx_nii)
             #    pha_nii_res = resample.cplx_to_phase(cplx_nii_res)
             #    return pha_nii_res.get_data(), pha_nii_res.header.get_zooms()[0:3], pha_nii_res.affine
     
     aff = pha_data.affine
-    res = diag(aff)[0:3]
-    data = pha_data.get_data()
+    res = np.diag(aff)[0:3]
+    data = get_data(pha_data)
 
     return data, res, aff
 
 
 def make_nifti(data, res=None, aff=None, description=""):
-    affine = eye(4)
+    affine = np.eye(4)
     if res is not None:
-        for i in xrange(3):
+        for i in np.arange(3):
             affine[i, i] = res[i]
             affine[i, 3] = -0.5 * (res[i] * (data.shape[i] - 1))
     elif aff is not None:
@@ -155,12 +158,12 @@ def save_nifti(fname, data, res=None, aff=None, description=""):
 
 
 def get_grad_phase(phase, res):
-    phi = exp(1.0j*phase)
-    dx = imag(dxp(phi, res[0])/phi)
-    dy = imag(dyp(phi, res[1])/phi)
-    dz = imag(dzp(phi, res[2])/phi)
-    grad_phase = concatenate((dx[...,newaxis], dy[...,newaxis],
-                              dz[...,newaxis]), axis=-1)
+    phi = np.exp(1.0j*phase)
+    dx = np.imag(dxp(phi, res[0])/phi)
+    dy = np.imag(dyp(phi, res[1])/phi)
+    dz = np.imag(dzp(phi, res[2])/phi)
+    grad_phase = np.concatenate((dx[...,np.newaxis], dy[...,np.newaxis],
+                              dz[...,np.newaxis]), axis=-1)
     return grad_phase
 
 
@@ -174,11 +177,11 @@ def get_laplace_phase(phase, res):
 
 
 def get_laplace_phase2(phase, res):
-    phi = exp(1.0j*phase)
+    phi = np.exp(1.0j*phase)
     laplace_phi = dxm(dxp(phi, res[0]), res[0]) + \
                   dym(dyp(phi, res[1]), res[1]) + \
                   dzm(dzp(phi, res[2]), res[2])
-    laplace_phi = imag(laplace_phi / phi)
+    laplace_phi = np.imag(laplace_phi / phi)
 
     return laplace_phi
 
@@ -188,15 +191,15 @@ def get_best_local_h1(dx, axis=0):
     F_shape[axis] -= 1
     F_shape.append(9)
 
-    F = zeros(F_shape, dtype=dx.dtype)
-    for i in xrange(3):
-        for j in xrange(3):
+    F = np.zeros(F_shape, dtype=dx.dtype)
+    for i in np.arange(3):
+        for j in np.arange(3):
             if (axis == 0):
-                F[...,i+3*j] = (dx[:-1,...] - 2*pi*(i-1))**2 + (dx[1:,...] + 2*pi*(j-1))**2
+                F[...,i+3*j] = (dx[:-1,...] - 2*np.pi*(i-1))**2 + (dx[1:,...] + 2*np.pi*(j-1))**2
             if (axis == 1):
-                F[...,i+3*j] = (dx[:,:-1,...] - 2*pi*(i-1))**2 + (dx[:,1:,...] + 2*pi*(j-1))**2
+                F[...,i+3*j] = (dx[:,:-1,...] - 2*np.pi*(i-1))**2 + (dx[:,1:,...] + 2*np.pi*(j-1))**2
             if (axis == 2):
-                F[...,i+3*j] = (dx[:,:,:-1,...] - 2*pi*(i-1))**2 + (dx[:,:,1:,...] + 2*pi*(j-1))**2
+                F[...,i+3*j] = (dx[:,:,:-1,...] - 2*np.pi*(i-1))**2 + (dx[:,:,1:,...] + 2*np.pi*(j-1))**2
 
     G = F.argmin(axis=-1)
     I = (G  % 3) - 1
@@ -207,9 +210,9 @@ def get_best_local_h1(dx, axis=0):
 
 def get_laplace_phase3(phase, res):
     #pad phase
-    phase = concatenate((phase[0,...][newaxis,...], phase, phase[-1,...][newaxis,...]), axis=0)
-    phase = concatenate((phase[:,0,...][:,newaxis,...], phase, phase[:,-1,...][:,newaxis,...]), axis=1)
-    phase = concatenate((phase[:,:,0,...][:,:,newaxis,...], phase, phase[:,:,-1,...][:,:,newaxis,...]), axis=2)
+    phase = np.concatenate((phase[0,...][np.newaxis,...], phase, phase[-1,...][np.newaxis,...]), axis=0)
+    phase = np.concatenate((phase[:,0,...][:,np.newaxis,...], phase, phase[:,-1,...][:,np.newaxis,...]), axis=1)
+    phase = np.concatenate((phase[:,:,0,...][:,:,np.newaxis,...], phase, phase[:,:,-1,...][:,:,np.newaxis,...]), axis=2)
 
     dx = (phase[1:,1:-1,1:-1] - phase[:-1,1:-1,1:-1])
     dy = (phase[1:-1,1:,1:-1] - phase[1:-1,:-1,1:-1])
@@ -220,16 +223,16 @@ def get_laplace_phase3(phase, res):
     (Iz,Jz) = get_best_local_h1(dz, axis=2)
 
     laplace_phi = (-2.0*phase[1:-1,1:-1,1:-1]
-                   + (phase[:-2,1:-1,1:-1] + 2*pi*Ix)
-                   + (phase[2:,1:-1,1:-1] + 2*pi*Jx))/(res[0]**2)
+                   + (phase[:-2,1:-1,1:-1] + 2*np.pi*Ix)
+                   + (phase[2:,1:-1,1:-1] + 2*np.pi*Jx))/(res[0]**2)
 
     laplace_phi += (-2.0*phase[1:-1,1:-1,1:-1]
-                    + (phase[1:-1,:-2,1:-1] + 2*pi*Iy)
-                    + (phase[1:-1,2:,1:-1] + 2*pi*Jy))/(res[1]**2)
+                    + (phase[1:-1,:-2,1:-1] + 2*np.pi*Iy)
+                    + (phase[1:-1,2:,1:-1] + 2*np.pi*Jy))/(res[1]**2)
 
     laplace_phi += (-2.0 *phase[1:-1,1:-1,1:-1]
-                    + (phase[1:-1,1:-1,:-2] + 2*pi*Iz)
-                    + (phase[1:-1, 1:-1, 2:] + 2 * pi * Jz)) / (res[2] ** 2)
+                    + (phase[1:-1,1:-1,:-2] + 2*np.pi*Iz)
+                    + (phase[1:-1, 1:-1, 2:] + 2 * np.pi * Jz)) / (res[2] ** 2)
 
     return laplace_phi
 
@@ -317,7 +320,7 @@ def main():
 
     (phase, res, aff) = read_phase_image(args.phase, mode, not args.ignore_orientation,
                                          do_resampling=not args.no_resampling)
-    # 1 ... for data already scaled in [-pi, pi]
+    # 1 ... for data already scaled in [-np.pi, np.pi]
     (mask, res_mask, aff_mask) = read_magnitude_image(args.mask, not args.ignore_orientation,
                                                       do_resampling=not args.no_resampling)
 
@@ -325,7 +328,7 @@ def main():
     mask = mask.squeeze()
 
     # DB check for correct affine - hopefully this is a good idea! Need to add a "force" option to arguments
-    if not args.ignore_orientation and not (allclose(aff, aff_mask)):
+    if not args.ignore_orientation and not (np.allclose(aff, aff_mask)):
         return "Orientation and/or resolution of mask and data does not match!"
 
     if not (mask.shape == phase.shape):
@@ -342,7 +345,7 @@ def main():
     # This should make sure that the output is ppm!
     # TODO  CHECK CHECK CHECK
     if args.echotime and args.fieldstrength:
-        scale = (2.0*pi*args.echotime)*(args.fieldstrength*GAMMA)
+        scale = (2.0*np.pi*args.echotime)*(args.fieldstrength*GAMMA)
     else:
         scale = 1.0  # TODO DB CHECK THIS!!! hmm is this correct? Probably not!
 
@@ -369,15 +372,14 @@ def main():
         # Copy mask
         mask = mask_orig.copy()
         # Hmmm not so nice... additional erode within the cython code!
-        for i in xrange(args.erosions):
+        for i in np.arange(args.erosions):
             mask = erode_mask(mask)
 
         # Stupid iteration loop... will not reuse old iterations!
         for ic, iteration in enumerate(args.iterations):
             print("  Iterations: {i} ({n} of {m})".format(i=iteration, n=ic + 1, m=len(args.iterations)))
 
-            phi = qsm_tgv(laplace_phi0, mask, res, alpha=(alpha0, alpha1), iterations=iteration, vis=args.vis,
-                          verbose=args.verbose)
+            phi = qsm_tgv_cython.qsm_tgv(laplace_phi0, mask, res, alpha=(alpha0, alpha1), iterations=iteration, vis=args.vis, verbose=args.verbose)
             chi = phi/scale # Double check the scaling!!!!!
 
             # outfilename = args.output.replace(".nii.gz","").replace(".nii","") \

@@ -1,10 +1,12 @@
 from __future__ import print_function
 
 # TODO Avoid wildcard imports
-from numpy import *
-from qsm_tgv_cython_helper import *
-
+#from numpy import *
+import numpy as np
+import qsm_tgv_cython_helper
 import progressbar
+import warnings
+import sys
 
 
 def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=False, verbose=False):
@@ -36,15 +38,15 @@ def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=Fals
     if vis and not __MPL_AVAIL:
         print('Matplotlib not available! No intermediate results will be shown!', file=sys.stderr)
 
-    laplace_phi0 = require(laplace_phi0, float32, 'C')
-    mask = require(mask != 0, float32, 'C')
+    laplace_phi0 = np.require(laplace_phi0, np.float32, 'C')
+    mask = np.require(mask != 0, np.float32, 'C')
     dtype = laplace_phi0.dtype
 
     # erode mask -- This is performed in addition to erosion already performed in the main file
-    mask0 = zeros_like(mask)
-    erode_mask(mask0, mask)
+    mask0 = np.zeros_like(mask)
+    qsm_tgv_cython_helper.erode_mask(mask0, mask)
     #mask0 = mask
-    #erode_mask(mask0, mask)
+    #qsm_tgv_cython_helper.erode_mask(mask0, mask)
 
     # get shapes
     phi_shape = laplace_phi0.shape
@@ -54,19 +56,19 @@ def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=Fals
     hess_phi_shape.append(6)
 
     # initialize primal variables
-    chi = zeros(phi_shape, dtype=dtype, order='C')
-    chi_ = zeros(phi_shape, dtype=dtype, order='C')
+    chi = np.zeros(phi_shape, dtype=dtype, order='C')
+    chi_ = np.zeros(phi_shape, dtype=dtype, order='C')
 
-    w = zeros(grad_phi_shape, dtype=dtype, order='C')
-    w_ = zeros(grad_phi_shape, dtype=dtype, order='C')
+    w = np.zeros(grad_phi_shape, dtype=dtype, order='C')
+    w_ = np.zeros(grad_phi_shape, dtype=dtype, order='C')
 
-    phi = zeros(phi_shape, dtype=dtype, order='C')
-    phi_ = zeros(phi_shape, dtype=dtype, order='C')
+    phi = np.zeros(phi_shape, dtype=dtype, order='C')
+    phi_ = np.zeros(phi_shape, dtype=dtype, order='C')
 
     # initialize dual variables
-    eta = zeros(phi_shape, dtype=dtype, order='C')
-    p = zeros(grad_phi_shape, dtype=dtype, order='C')
-    q = zeros(hess_phi_shape, dtype=dtype, order='C')
+    eta = np.zeros(phi_shape, dtype=dtype, order='C')
+    p = np.zeros(grad_phi_shape, dtype=dtype, order='C')
+    q = np.zeros(hess_phi_shape, dtype=dtype, order='C')
 
     # estimate squared norm
     grad_norm_sqr = 4.0*(sum(1.0/(res**2)))
@@ -74,18 +76,18 @@ def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=Fals
     #wave_norm_sqr = (1.0/3.0*(1.0/(res[0]**2 + res[1]**2)) \
     #                 + 2.0/3.0*(1.0/res[2]**2))**2
     #norm_sqr = 0.5*(wave_norm_sqr + 2*grad_norm_sqr +
-                     #sqrt((wave_norm_sqr - 1)**2 + 4*grad_norm_sqr)
+                     #np.sqrt((wave_norm_sqr - 1)**2 + 4*grad_norm_sqr)
                      #+ 1) #TODO
     norm_sqr = 2.0 * grad_norm_sqr**2 + 1
 
     # set regularization parameters
-    alpha1 = float32(alpha[1])
-    alpha0 = float32(alpha[0])
+    alpha1 = np.float32(alpha[1])
+    alpha0 = np.float32(alpha[0])
 
     # initialize resolution
-    res0 = float32(abs(res[0]))
-    res1 = float32(abs(res[1]))
-    res2 = float32(abs(res[2]))
+    res0 = np.float32(abs(res[0]))
+    res1 = np.float32(abs(res[1]))
+    res2 = np.float32(abs(res[2]))
 
     k = 0
     if verbose:
@@ -99,25 +101,23 @@ def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=Fals
             print("Iteration %d" % k, file=sys.stderr)
 
 
-        tau = float32(1.0/sqrt(norm_sqr))
-        sigma = float32((1.0/norm_sqr)/tau)
+        tau = np.float32(1.0/np.sqrt(norm_sqr))
+        sigma = np.float32((1.0/norm_sqr)/tau)
 
         #############
         # dual update
 
         if verbose:
             print("updating eta...", file=sys.stderr)
-        tgv_update_eta(eta, phi_, chi_, laplace_phi0,
-                       mask0, sigma, res0, res1, res2)
+        qsm_tgv_cython_helper.tgv_update_eta(eta, phi_, chi_, laplace_phi0, mask0, sigma, res0, res1, res2)
 
         if verbose:
             print("updating p...", file=sys.stderr)
-        tgv_update_p(p, chi_, w_, mask, mask0, sigma, alpha1,
-                     res0, res1, res2)
+        qsm_tgv_cython_helper.tgv_update_p(p, chi_, w_, mask, mask0, sigma, alpha1, res0, res1, res2)
 
         if verbose:
             print("updating q...", file=sys.stderr)
-        tgv_update_q(q, w_, mask0, sigma, alpha0, res0, res1, res2)
+        qsm_tgv_cython_helper.tgv_update_q(q, w_, mask0, sigma, alpha0, res0, res1, res2)
 
         #######################
         # swap primal variables
@@ -131,17 +131,15 @@ def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=Fals
 
         if verbose:
             print("updating phi...", file=sys.stderr)
-        tgv_update_phi(phi, phi_, eta, mask, mask0, tau,
-                       res0, res1, res2)
+        qsm_tgv_cython_helper.tgv_update_phi(phi, phi_, eta, mask, mask0, tau, res0, res1, res2)
 
         if verbose:
             print("updating chi...", file=sys.stderr)
-        tgv_update_chi(chi, chi_, eta, p, mask0, tau,
-                       res0, res1, res2)
+        qsm_tgv_cython_helper.tgv_update_chi(chi, chi_, eta, p, mask0, tau, res0, res1, res2)
 
         if verbose:
             print("updating w...", file=sys.stderr)
-        tgv_update_w(w, w_, p, q, mask, mask0, tau, res0, res1, res2)
+        qsm_tgv_cython_helper.tgv_update_w(w, w_, p, q, mask, mask0, tau, res0, res1, res2)
 
         ######################
         # extragradient update
@@ -149,19 +147,19 @@ def qsm_tgv(laplace_phi0, mask, res, alpha=(0.2, 0.1), iterations=1000, vis=Fals
         if verbose:
             print("updating chi_, w_...", file=sys.stderr)
 
-        extragradient_update(phi_.ravel(), phi.ravel())
-        extragradient_update(chi_.ravel(), chi.ravel())
-        extragradient_update(w_.ravel(), w.ravel())
+        qsm_tgv_cython_helper.extragradient_update(phi_.ravel(), phi.ravel())
+        qsm_tgv_cython_helper.extragradient_update(chi_.ravel(), chi.ravel())
+        qsm_tgv_cython_helper.extragradient_update(w_.ravel(), w.ravel())
 
         if (__MPL_AVAIL and vis and (k % 10 == 0)):
             mpl.ion()
             mpl.figure(1)
             mpl.clf()
-            mpl.imshow(chi[:, :, chi.shape[2] / 2], cmap=mpl.cm.gray, vmin=-pi, vmax=pi)
+            mpl.imshow(chi[:, :, chi.shape[2] / 2], cmap=mpl.cm.gray, vmin=-np.pi, vmax=np.pi)
             mpl.draw()
             mpl.figure(2)
             mpl.clf()
-            mpl.imshow(phi[:, :, phi.shape[2] / 2], cmap=mpl.cm.gray, vmin=-pi, vmax=pi)
+            mpl.imshow(phi[:, :, phi.shape[2] / 2], cmap=mpl.cm.gray, vmin=-np.pi, vmax=np.pi)
             mpl.draw()
             mpl.ioff()
 

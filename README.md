@@ -1,3 +1,5 @@
+This code was downloaded from https://www.neuroimaging.at/pages/qsm.php and adapted to run on newer versions of python, nibabel by yanarof
+
 QSM reconstruction using Total Generalized Variation (TGV-QSM)
 Kristian Bredies and Christian Langkammer
 Version from June 2016
@@ -9,13 +11,31 @@ www.neuroimaging.at
 
 
 ## Installation
-`python setup.py install`
- (in case of problems such as Ubuntu 18.04+ try installing an older version of cython with pip install Cython==0.19.2 - Thanks Andrej!) 
+
+```bash
+sudo apt install python3.12-dev build-essential
+```
+
+```bash
+nibabel==5.2.1
+numpy==1.26.4
+Cython==3.0.10
+```
+
+
+
+
+Compile the Cython
+```bash
+python setup.py build_ext --inplace
+```
+
 
 ## Command line options
 
+usage:
 ```bash
-usage: tgv_qsm [-h] -p PHASE -m MASK [-o OUTPUT_SUFFIX]
+tgv_qsm [-h] -p PHASE -m MASK [-o OUTPUT_SUFFIX]
                [--alpha ALPHA ALPHA | --factors FACTORS [FACTORS ...]]
                [-e EROSIONS] [-i ITERATIONS [ITERATIONS ...]]
                [-f FIELDSTRENGTH] [-t ECHOTIME] [-s] [--ignore-orientation]
@@ -23,14 +43,18 @@ usage: tgv_qsm [-h] -p PHASE -m MASK [-o OUTPUT_SUFFIX]
                [--vis] [-v]
 ```
 
+
 remarks for options:
 	-t TE in seconds
 	-f fieldstrength in Tesla
 	-s autoscaling for SIEMENS phase data
 
 
+
 test data:
-`tgv_qsm  -p epi3d_test_phase.nii.gz -m epi3d_test_mask.nii.gz -f 2.89 -t 0.027 -o epi3d_test_QSM`
+```bash
+python qsm_tgv_main.py -p test_data/epi3d_test_phase.nii.gz -m test_data/epi3d_test_mask.nii.gz -f 2.89 -t 0.027 -o epi3d_test_QSM
+```
 
 
 ## bet brain masking

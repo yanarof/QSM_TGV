@@ -17,15 +17,19 @@ from scipy import ndimage, linalg
 
 
 def phase_as_cplx(nii):
-    dat = nii.get_fdata()
+    dat = get_data(nii)
     dat = np.exp(1j * dat)
     return new_img_like(nii, dat)
 
 
 def cplx_to_phase(nii):
-    dat = nii.get_fdata()
+    dat = get_data(nii)
     dat = np.angle(dat)
     return new_img_like(nii, dat)
+
+def get_data(img):
+    #get_data() is deprecated in favor of get_fdata(), which has a more predictable return type. To obtain get_data() behavior going forward, use numpy.asanyarray(img.dataobj).
+    return np.asanyarray(img.dataobj)
 
 
 def resample_to_reference(data_nii, reference_nii, conform=True, interpolation='continuous', copy=True, order='F',
@@ -98,7 +102,7 @@ def copy_img(img):
     """
     if not isinstance(img, nib.spatialimages.SpatialImage):
         raise ValueError("Input value is not an image")
-    return new_img_like(img, img.get_fdata().copy(), img.get_affine().copy(),
+    return new_img_like(img, img.get_data().copy(), img.affine.copy(),
                         copy_header=True)
 
 
@@ -122,16 +126,16 @@ def new_img_like(ref_niimg, data, affine=None, copy_header=False):
     """
     # Hand-written loading code to avoid too much memory consumption
     orig_ref_niimg = ref_niimg
-    if (not hasattr(ref_niimg, 'get_fdata')
+    if (not hasattr(ref_niimg, 'get_data')
         and hasattr(ref_niimg, '__iter__')):
         ref_niimg = ref_niimg[0]
-    if not (hasattr(ref_niimg, 'get_fdata')
-            and hasattr(ref_niimg, 'get_affine')):
-        raise TypeError(('The reference image should be a niimg, %r '
-                         'was passed') % orig_ref_niimg)
+    if not (hasattr(ref_niimg, 'get_data') and hasattr(ref_niimg, 'affine')):
+        #print('get_data=', hasattr(ref_niimg, 'get_data'))
+        #print('get_affine=', hasattr(ref_niimg, 'get_affine'))
+        raise TypeError(('The reference image should be a niimg, %r ' 'was passed') % orig_ref_niimg)
 
     if affine is None:
-        affine = ref_niimg.get_affine()
+        affine = ref_niimg.affine
 
     # TODO Ooops this not covered from the code I copied :-(
     if data.dtype == bool:
@@ -140,7 +144,7 @@ def new_img_like(ref_niimg, data, affine=None, copy_header=False):
                 isinstance(ref_niimg, nibabel.freesurfer.mghformat.MGHImage)):
             default_dtype = np.uint8
         raise NotImplementedError("OhOh...")
-        data = as_ndarray(data, dtype=default_dtype)
+        data = np.asarray(data, dtype=default_dtype)
 
     header = None
     if copy_header:
@@ -296,8 +300,8 @@ def get_mask_bounds(img):
         reorder_img to ensure that it is the case.
     """
 
-    mask = img.get_fdata().astype(np.bool)
-    affine = img.get_affine()
+    mask = get_data(img).astype(np.bool)
+    affine = img.affine
     (xmin, xmax), (ymin, ymax), (zmin, zmax) = get_bounds(mask.shape, affine)
     slices = ndimage.find_objects(mask)
     if len(slices) == 0:
@@ -447,14 +451,14 @@ def resample_img(img, target_affine=None, target_shape=None,
 
     # Call self for handling of complex datasets
     # TODO make this more effective - directly assign to mat.real/imag --> DONE BUT TESTED (see below)
-    # if np.iscomplexobj(img.get_fdata()):
-    #    real_image = new_img_like(img, img.get_fdata().real, img.affine)
-    #    imag_image = new_img_like(img, img.get_fdata().imag, img.affine)
+    # if np.iscomplexobj(get_data(img)):
+    #    real_image = new_img_like(img, get_data(img).real, img.affine)
+    #    imag_image = new_img_like(img, get_data(img).imag, img.affine)
     #
     #     real_resamp = resample_img(real_image, target_affine, target_shape, interpolation, copy, order)
     #     imag_resamp = resample_img(imag_image, target_affine, target_shape, interpolation, copy, order)
     #
-    #     return new_img_like(real_resamp, real_resamp.get_fdata() + 1j*imag_resamp.get_fdata(), real_resamp.affine)
+    #     return new_img_like(real_resamp, get_data(real_resamp) + 1j*get_data(imag_resamp), real_resamp.affine)
 
     # Do as many checks as possible before loading data, to avoid potentially
     # costly calls before raising an exception.
@@ -491,7 +495,7 @@ def resample_img(img, target_affine=None, target_shape=None,
         target_affine = np.asarray(target_affine)
 
     shape = img.shape
-    affine = img.get_affine()
+    affine = img.affine
 
     if (np.all(np.array(target_shape) == shape[:3]) and
             np.allclose(target_affine, affine)):
@@ -502,7 +506,7 @@ def resample_img(img, target_affine=None, target_shape=None,
     # We now know that some resampling must be done.
     # The value of "copy" is of no importance: output is always a separate
     # array.
-    data = img.get_fdata()
+    data = get_data(img)
 
     # Get a bounding box for the transformed data
     # Embed target_affine in 4x4 shape if necessary

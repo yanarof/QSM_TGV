@@ -1,7 +1,0 @@
-Cython
-numpy
-matplotlib
-pandas
-scikit-learn
-json
-

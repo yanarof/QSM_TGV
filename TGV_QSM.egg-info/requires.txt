@@ -1,3 +1,0 @@
-cython
-nibabel
-numpy
