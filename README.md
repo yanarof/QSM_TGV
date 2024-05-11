@@ -12,22 +12,19 @@ www.neuroimaging.at
 
 ## Installation
 
+Linux requirements:
 ```bash
 sudo apt install python3.12-dev build-essential
 ```
 
+Python requirements:
 ```bash
-nibabel==5.2.1
-numpy==1.26.4
-Cython==3.0.10
+pip install nibabel numpy Cython
 ```
-
-
-
 
 Compile the Cython
 ```bash
-python setup.py build_ext --inplace
+cd src ; python setup.py build_ext --inplace ; cd ..
 ```
 
 
@@ -53,7 +50,7 @@ remarks for options:
 
 test data:
 ```bash
-python qsm_tgv_main.py -p test_data/epi3d_test_phase.nii.gz -m test_data/epi3d_test_mask.nii.gz -f 2.89 -t 0.027 -o epi3d_test_QSM
+python src/qsm_tgv_main.py -p test_data/epi3d_test_phase.nii.gz -m test_data/epi3d_test_mask.nii.gz -f 2.89 -t 0.027 -o epi3d_test_QSM
 ```
 
 
@@ -62,3 +59,12 @@ python qsm_tgv_main.py -p test_data/epi3d_test_phase.nii.gz -m test_data/epi3d_t
 - bet magni.nii.gz mask -n -m -R -f 0.1 -g 0.0
 - (in case something is lost, vary parameter g minimally)
 
+
+This code was run and tested with the following
+```
+Ubuntu 24.04 LTS
+python-3.12
+nibabel==5.2.1
+numpy==1.26.4
+Cython==3.0.10
+```

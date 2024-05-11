@@ -100,7 +100,7 @@ def read_phase_image(fname, mode=0, force_diag=True, do_resampling=True):
 
     fname : file name of data to load
     mode: 0 or 1 - if 0 will rescale phase data from -4096.4096 to -np.pi...np.pi
-    force_np.diag: Make sure data affine is np.diagonal afterwards. Implies dim[2] aligned with field z-axis
+    force_diag: Make sure data affine is np.diagonal afterwards. Implies dim[2] aligned with field z-axis
     do_resampling: if data was oblique will apply resampling by spline interpolation
     """
 
@@ -125,7 +125,7 @@ def read_phase_image(fname, mode=0, force_diag=True, do_resampling=True):
             # if not resample:
 
             # else:
-            #    pha_data,_,_ = read_phase_image(fname, mode=mode, force_np.diag=False)
+            #    pha_data,_,_ = read_phase_image(fname, mode=mode, force_diag=False)
             #    cplx_nii = resample.phase_as_cplx(pha_data)
             #    cplx_nii_res = resample.resample_to_physical(cplx_nii)
             #    pha_nii_res = resample.cplx_to_phase(cplx_nii_res)
